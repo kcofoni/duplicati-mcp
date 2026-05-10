@@ -1,0 +1,15 @@
+[MESSAGES CONTROL]
+disable=line-too-long,
+        broad-except,
+        protected-access
+
+[FORMAT]
+max-line-length=120
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,f,e
+
+[DESIGN]
+max-args=7
+max-locals=20
+max-branches=15

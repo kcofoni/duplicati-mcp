@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  duplicati-mcp:
+    image: kcofoni/duplicati-mcp:latest
+    # To build locally instead of using the Docker Hub image, comment out the line above and uncomment:
+    # build: .
+    container_name: duplicati-mcp-server
+    ports:
+      - "3000:3000"
+    environment:
+      - MCP_TRANSPORT=streamable-http
+      - MCP_PORT=3000
+      # Point to your Duplicati instance — use the service name if on the same Docker network
+      - DUPLICATI_URL=http://duplicati:8200
+      - DUPLICATI_PASSWORD=
+      # Set to "true" to disable run_backup, abort_backup, import_backup_config
+      - DUPLICATI_READONLY=false
+    restart: unless-stopped
+    networks:
+      - duplicati-network
+
+networks:
+  duplicati-network:
+    driver: bridge
