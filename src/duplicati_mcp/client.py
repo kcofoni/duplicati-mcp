@@ -1,12 +1,15 @@
+"""Async client for the Duplicati REST API."""
 import httpx
 from typing import Any
 
 
 class DuplicatiError(Exception):
-    pass
+    """Raised when the Duplicati API returns an error or is unreachable."""
 
 
 class DuplicatiClient:
+    """Async HTTP client for the Duplicati REST API with JWT authentication."""
+
     def __init__(self, base_url: str, password: str | None = None) -> None:
         self._base_url = base_url.rstrip("/")
         self._password = password
@@ -15,50 +18,40 @@ class DuplicatiClient:
             timeout=60.0,
             follow_redirects=True,
         )
-        self._xsrf_token: str | None = None
-        self._authenticated = False
-
-    async def _fetch_xsrf_token(self) -> str:
-        resp = await self._client.get("/api/v1/auth/refresh")
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("Token") or resp.cookies.get("xsrf-token") or ""
+        self._access_token: str | None = None
 
     async def _authenticate(self) -> None:
         if not self._password:
-            self._authenticated = True
             return
-        token = await self._fetch_xsrf_token()
-        resp = await self._client.post(
-            "/api/v1/auth/login",
-            json={"Password": self._password},
-            headers={"X-XSRF-Token": token},
-        )
+        try:
+            resp = await self._client.post(
+                "/api/v1/auth/login",
+                json={"Password": self._password},
+            )
+        except httpx.ConnectError as e:
+            raise DuplicatiError(f"Cannot connect to Duplicati at {self._base_url}: {e}") from e
         if resp.status_code == 401:
             raise DuplicatiError("Authentication failed: incorrect password")
         resp.raise_for_status()
-        self._xsrf_token = token
-        self._authenticated = True
+        self._access_token = resp.json().get("AccessToken")
 
     async def _req(self, method: str, path: str, **kwargs: Any) -> Any:
-        if not self._authenticated:
+        if self._password and not self._access_token:
             await self._authenticate()
 
         headers: dict = kwargs.pop("headers", {})
-        if self._xsrf_token:
-            headers["X-XSRF-Token"] = self._xsrf_token
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
 
         try:
             resp = await self._client.request(method, path, headers=headers, **kwargs)
         except httpx.ConnectError as e:
-            raise DuplicatiError(f"Cannot connect to Duplicati at {self._base_url}: {e}")
+            raise DuplicatiError(f"Cannot connect to Duplicati at {self._base_url}: {e}") from e
 
         if resp.status_code == 401:
-            # Token expired — re-authenticate once
-            self._authenticated = False
-            self._xsrf_token = None
+            self._access_token = None
             await self._authenticate()
-            headers["X-XSRF-Token"] = self._xsrf_token
+            headers["Authorization"] = f"Bearer {self._access_token}"
             resp = await self._client.request(method, path, headers=headers, **kwargs)
 
         if resp.status_code == 404:
@@ -72,28 +65,40 @@ class DuplicatiClient:
         return resp.json() if resp.content else {}
 
     async def list_backups(self) -> list[dict]:
+        """Return all configured backup jobs."""
         result = await self._req("GET", "/api/v1/backups")
         return result if isinstance(result, list) else []
 
     async def get_backup(self, backup_id: str) -> dict:
+        """Return full details for a backup job."""
         return await self._req("GET", f"/api/v1/backup/{backup_id}")
 
     async def run_backup(self, backup_id: str) -> dict:
+        """Trigger a backup job to run immediately."""
         return await self._req("POST", f"/api/v1/backup/{backup_id}/run")
 
     async def abort_backup(self, backup_id: str) -> dict:
+        """Abort the currently running backup for a job."""
         return await self._req("POST", f"/api/v1/backup/{backup_id}/abort")
 
     async def get_progress(self) -> dict:
+        """Return live progress of the active backup task."""
         return await self._req("GET", "/api/v1/progressstate")
 
     async def get_server_status(self) -> dict:
+        """Return server state, version, and active task info."""
         return await self._req("GET", "/api/v1/serverstate")
 
     async def export_backup(self, backup_id: str) -> dict:
+        """Export a backup job configuration as a dict."""
         return await self._req("GET", f"/api/v1/backup/{backup_id}/export")
 
+    async def update_backup(self, backup_id: str, payload: dict) -> dict:
+        """Update an existing backup job configuration via PUT."""
+        return await self._req("PUT", f"/api/v1/backup/{backup_id}", json=payload)
+
     async def import_backup(self, config: dict) -> dict:
+        """Import a backup job from a configuration dict."""
         return await self._req(
             "POST",
             "/api/v1/backups/import",
@@ -101,4 +106,5 @@ class DuplicatiClient:
         )
 
     async def aclose(self) -> None:
+        """Close the underlying HTTP client."""
         await self._client.aclose()

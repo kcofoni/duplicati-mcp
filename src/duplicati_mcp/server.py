@@ -4,7 +4,10 @@ import os
 from functools import lru_cache
 from typing import Any
 
+from dotenv import load_dotenv
 from mcp.server.fastmcp import FastMCP
+
+load_dotenv(override=True)
 
 from .client import DuplicatiClient, DuplicatiError
 
@@ -135,6 +138,31 @@ async def export_backup_config(backup_id: str) -> str:
         return f"Error: {e}"
 
 
+
+@mcp.tool()
+async def update_backup_config(backup_id: str, config_json: str) -> str:
+    """Update an existing backup job from a modified JSON configuration (as exported by export_backup_config).
+    Use this to modify sources, settings, schedule, filters, etc. on an existing job.
+
+    Args:
+        backup_id: Numeric ID of the backup job to update.
+        config_json: Modified JSON string of the backup configuration.
+    """
+    if _READONLY:
+        return _readonly_error("update_backup_config")
+    try:
+        config = json.loads(config_json)
+    except json.JSONDecodeError as e:
+        return f"Error: Invalid JSON — {e}"
+    backup = config.get("Backup", config)
+    payload = {"Backup": backup, "Schedule": config.get("Schedule")}
+    try:
+        await _get_client().update_backup(backup_id, payload)
+        return f"Backup job {backup_id} updated successfully."
+    except DuplicatiError as e:
+        return f"Error: {e}"
+
+
 @mcp.tool()
 async def import_backup_config(config_json: str) -> str:
     """Import a backup job from a JSON configuration string (as produced by export_backup_config).
@@ -156,11 +184,11 @@ async def import_backup_config(config_json: str) -> str:
 
 
 def main() -> None:
-    """Entry point — selects stdio or SSE transport based on MCP_TRANSPORT env var."""
+    """Entry point — selects stdio or streamable-http transport based on MCP_TRANSPORT env var."""
     transport = os.environ.get("MCP_TRANSPORT", "stdio")
     if transport == "streamable-http":
-        host = os.environ.get("MCP_HOST", "0.0.0.0")
-        port = int(os.environ.get("MCP_PORT", "3000"))
-        mcp.run(transport="streamable-http", host=host, port=port)
+        os.environ.setdefault("FASTMCP_HOST", os.environ.get("MCP_HOST", "0.0.0.0"))
+        os.environ.setdefault("FASTMCP_PORT", os.environ.get("MCP_PORT", "3000"))
+        mcp.run(transport="streamable-http")
     else:
         mcp.run()
