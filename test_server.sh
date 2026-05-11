@@ -1,5 +1,7 @@
 #!/bin/bash
 
+PORT="${1:-3000}"
+
 echo "=== Duplicati MCP Server Test ==="
 echo
 
@@ -12,9 +14,10 @@ fi
 echo "✅ Container active"
 echo
 
-echo "2. Testing MCP endpoint..."
-response=$(curl -s -o /dev/null -w "%{http_code}" -X POST http://localhost:3000/mcp \
+echo "2. Testing MCP endpoint (port $PORT)..."
+response=$(curl -s -o /dev/null -w "%{http_code}" -X POST "http://localhost:$PORT/mcp" \
   -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}')
 if [ "$response" = "200" ]; then
     echo "✅ MCP endpoint responding (HTTP $response)"

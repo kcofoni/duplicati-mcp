@@ -7,6 +7,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY src/ src/
 COPY pyproject.toml .
+COPY README.md .
 RUN pip install --no-cache-dir -e .
 
 EXPOSE 3000
@@ -14,8 +15,8 @@ EXPOSE 3000
 LABEL io.modelcontextprotocol.server.name="io.github.kcofoni/duplicati-mcp"
 
 ENV MCP_TRANSPORT=streamable-http
-ENV MCP_HOST=0.0.0.0
-ENV MCP_PORT=3000
+ENV FASTMCP_HOST=0.0.0.0
+ENV FASTMCP_PORT=3000
 ENV DUPLICATI_URL=http://duplicati:8200
 ENV DUPLICATI_READONLY=false
 

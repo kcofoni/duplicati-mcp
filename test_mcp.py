@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
 """Smoke test for the Duplicati MCP server (Streamable HTTP transport)."""
 import asyncio
+import json
 import sys
 
 import httpx
 
 
+def _parse_response(response: httpx.Response) -> dict:
+    """Parse MCP response — handles both direct JSON and SSE event-stream."""
+    content_type = response.headers.get("content-type", "")
+    if "text/event-stream" in content_type:
+        for line in response.text.splitlines():
+            if line.startswith("data:"):
+                payload = line[5:].strip()
+                if payload and payload != "[DONE]":
+                    return json.loads(payload)
+        return {}
+    return response.json() if response.content else {}
+
+
 async def main(server_url: str = "http://localhost:3000") -> None:
-    base_url = server_url
-    mcp_url = f"{base_url}/mcp"
+    mcp_url = f"{server_url}/mcp"
 
     print(f"1️⃣  Sending initialize to {mcp_url}...")
     async with httpx.AsyncClient(timeout=30) as client:
@@ -29,12 +42,17 @@ async def main(server_url: str = "http://localhost:3000") -> None:
                 headers={"Accept": "application/json, text/event-stream"},
             )
             print(f"   HTTP status: {response.status_code}")
+            print(f"   Content-Type: {response.headers.get('content-type', '?')}")
 
             if response.status_code == 200:
                 print("✅ Initialize succeeded")
-                data = response.json()
+                session_id = response.headers.get("mcp-session-id")
+                if session_id:
+                    print(f"   Session ID: {session_id[:16]}...")
+                data = _parse_response(response)
                 server_info = data.get("result", {}).get("serverInfo", {})
-                print(f"   Server: {server_info.get('name', '?')} v{server_info.get('version', '?')}")
+                if server_info:
+                    print(f"   Server: {server_info.get('name', '?')} v{server_info.get('version', '?')}")
             else:
                 print(f"❌ Unexpected status: {response.status_code}")
                 print(f"   Body: {response.text[:200]}")
@@ -44,6 +62,10 @@ async def main(server_url: str = "http://localhost:3000") -> None:
             print(f"❌ Cannot connect to {mcp_url}: {e}")
             return
 
+        session_headers = {"Accept": "application/json, text/event-stream"}
+        if session_id:
+            session_headers["mcp-session-id"] = session_id
+
         print(f"\n2️⃣  Listing tools...")
         try:
             tools_msg = {
@@ -52,9 +74,14 @@ async def main(server_url: str = "http://localhost:3000") -> None:
                 "method": "tools/list",
                 "params": {},
             }
-            response = await client.post(mcp_url, json=tools_msg)
+            response = await client.post(
+                mcp_url,
+                json=tools_msg,
+                headers=session_headers,
+            )
             if response.status_code == 200:
-                tools = response.json().get("result", {}).get("tools", [])
+                data = _parse_response(response)
+                tools = data.get("result", {}).get("tools", [])
                 print(f"✅ {len(tools)} tools available:")
                 for tool in tools:
                     print(f"   - {tool['name']}")

@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.kcofoni/duplicati-mcp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "MCP server for managing Duplicati backup jobs — list, run, monitor and configure backups from an LLM.",
   "repository": {
     "url": "https://github.com/kcofoni/duplicati-mcp",
@@ -10,7 +10,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "docker.io/kcofoni/duplicati-mcp:v0.1.0",
+      "identifier": "docker.io/kcofoni/duplicati-mcp:v1.0.0",
       "transport": {
         "type": "http",
         "url": "http://localhost:3000/mcp"

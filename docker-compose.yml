@@ -9,8 +9,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - MCP_TRANSPORT=streamable-http
-      - MCP_PORT=3000
       # Point to your Duplicati instance — use the service name if on the same Docker network
       - DUPLICATI_URL=http://duplicati:8200
       - DUPLICATI_PASSWORD=
