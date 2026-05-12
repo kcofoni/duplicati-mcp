@@ -64,7 +64,7 @@ Replace `localhost` with your Docker host IP if running remotely.
 
 ### Claude Desktop
 
-Add to your Claude Desktop configuration file:
+Claude Desktop requires `mcp-proxy` to connect to HTTP servers. Add to your configuration file:
 
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -73,8 +73,8 @@ Add to your Claude Desktop configuration file:
 {
   "mcpServers": {
     "duplicati": {
-      "type": "http",
-      "url": "http://your-host:3000/mcp"
+      "command": "uvx",
+      "args": ["mcp-proxy", "--transport", "streamablehttp", "http://your-host:3000/mcp"]
     }
   }
 }
@@ -89,7 +89,8 @@ Add to your Claude Desktop configuration file:
 5. **get_progress**: Get live progress of the active backup task
 6. **get_server_status**: Get Duplicati server state and version
 7. **export_backup_config**: Export a job configuration as JSON
-8. **import_backup_config**: Import a job configuration from JSON
+8. **update_backup_config**: Update an existing job configuration in place (use with `export_backup_config` to modify sources, settings, schedule, etc.)
+9. **import_backup_config**: Import a job configuration from JSON
 
 ## Environment Variables
 
@@ -98,11 +99,10 @@ Add to your Claude Desktop configuration file:
 | `DUPLICATI_URL` | `http://duplicati:8200` | URL of the Duplicati instance |
 | `DUPLICATI_PASSWORD` | _(empty)_ | Duplicati web interface password |
 | `DUPLICATI_READONLY` | `false` | Set to `true` to disable write operations |
-| `MCP_PORT` | `3000` | Port the MCP server listens on |
 
 ## Read-only Mode
 
-Set `DUPLICATI_READONLY=true` to disable all write operations (`run_backup`, `abort_backup`, `import_backup_config`). Read tools remain fully available — useful for safely exploring and analyzing your backup configuration.
+Set `DUPLICATI_READONLY=true` to disable all write operations (`run_backup`, `abort_backup`, `update_backup_config`, `import_backup_config`). Read tools remain fully available — useful for safely exploring and analyzing your backup configuration.
 
 ## Technical Stack
 

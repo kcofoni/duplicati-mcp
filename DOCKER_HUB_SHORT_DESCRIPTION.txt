@@ -1,1 +1,1 @@
-MCP server for managing Duplicati backups via REST API — list, run, monitor and configure backup jobs from an LLM.
+MCP server for Duplicati backup management — list, run, monitor and configure jobs from an LLM.

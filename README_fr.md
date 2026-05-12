@@ -80,9 +80,31 @@ curl -X POST http://localhost:3000/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
-## Configuration client (Docker/distant)
+## Configuration client
 
-### Claude Code
+### Claude Code — local (stdio)
+
+Pour une utilisation locale sans Docker, ajouter dans le `.mcp.json` du projet :
+
+```json
+{
+  "mcpServers": {
+    "duplicati": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "duplicati-mcp"],
+      "env": {
+        "DUPLICATI_URL": "http://localhost:8200",
+        "DUPLICATI_READONLY": ""
+      }
+    }
+  }
+}
+```
+
+Les credentials sont chargés depuis le fichier `.env` à la racine du projet (voir [Démarrage](#démarrage)).
+
+### Claude Code — Docker/distant (HTTP)
 
 Ajouter dans `.mcp.json` :
 
@@ -99,6 +121,8 @@ Ajouter dans `.mcp.json` :
 
 ### Claude Desktop
 
+Claude Desktop nécessite `mcp-proxy` comme pont vers les serveurs HTTP. Ajouter dans le fichier de configuration :
+
 **macOS** : `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows** : `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -106,8 +130,8 @@ Ajouter dans `.mcp.json` :
 {
   "mcpServers": {
     "duplicati": {
-      "type": "http",
-      "url": "http://votre-host:3000/mcp"
+      "command": "uvx",
+      "args": ["mcp-proxy", "--transport", "streamablehttp", "http://votre-host:3000/mcp"]
     }
   }
 }
@@ -129,7 +153,8 @@ Une fois connecté, le LLM a accès à :
 
 ### Configuration
 7. **export_backup_config** — Exporter la configuration d'un job en JSON
-8. **import_backup_config** — Importer une configuration de job depuis un JSON
+8. **update_backup_config** — Mettre à jour une configuration existante en place (utiliser avec `export_backup_config` pour modifier sources, settings, schedule, etc.)
+9. **import_backup_config** — Importer une configuration de job depuis un JSON (crée un nouveau job)
 
 ## Variables d'environnement
 
@@ -143,7 +168,7 @@ Une fois connecté, le LLM a accès à :
 
 ### Mode lecture seule
 
-`DUPLICATI_READONLY=true` désactive `run_backup`, `abort_backup` et `import_backup_config`. Tous les outils de lecture restent actifs. Utile pour explorer et analyser les configurations de sauvegarde sans risque de modification.
+`DUPLICATI_READONLY=true` désactive `run_backup`, `abort_backup`, `update_backup_config` et `import_backup_config`. Tous les outils de lecture restent actifs. Utile pour explorer et analyser les configurations de sauvegarde sans risque de modification.
 
 ## Docker Hub
 

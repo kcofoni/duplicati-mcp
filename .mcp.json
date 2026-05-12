@@ -1,13 +1,9 @@
 {
   "mcpServers": {
     "duplicati": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "duplicati-mcp"],
-      "env": {
-        "DUPLICATI_URL": "http://localhost:8200",
-        "DUPLICATI_READONLY": ""
-      }
+      "type": "http",
+      "url": "http://localhost:3002/mcp"
     }
+
   }
 }

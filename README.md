@@ -80,9 +80,31 @@ curl -X POST http://localhost:3000/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 ```
 
-## Client Configuration (Docker/remote)
+## Client Configuration
 
-### Claude Code
+### Claude Code — local (stdio)
+
+For local use without Docker, add to your project `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "duplicati": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "duplicati-mcp"],
+      "env": {
+        "DUPLICATI_URL": "http://localhost:8200",
+        "DUPLICATI_READONLY": ""
+      }
+    }
+  }
+}
+```
+
+Credentials are loaded from the `.env` file at the project root (see [Getting Started](#getting-started)).
+
+### Claude Code — Docker/remote (HTTP)
 
 Add to your `.mcp.json`:
 
@@ -99,6 +121,8 @@ Add to your `.mcp.json`:
 
 ### Claude Desktop
 
+Claude Desktop requires `mcp-proxy` as a bridge to HTTP servers. Add to your configuration file:
+
 **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
@@ -106,8 +130,8 @@ Add to your `.mcp.json`:
 {
   "mcpServers": {
     "duplicati": {
-      "type": "http",
-      "url": "http://your-host:3000/mcp"
+      "command": "uvx",
+      "args": ["mcp-proxy", "--transport", "streamablehttp", "http://your-host:3000/mcp"]
     }
   }
 }
@@ -129,7 +153,8 @@ Once connected, the LLM has access to:
 
 ### Configuration
 7. **export_backup_config** — Export a job configuration as JSON
-8. **import_backup_config** — Import a job configuration from JSON
+8. **update_backup_config** — Update an existing job configuration in place (use with `export_backup_config` to modify sources, settings, schedule, etc.)
+9. **import_backup_config** — Import a job configuration from JSON (creates a new job)
 
 ## Environment Variables
 
@@ -143,7 +168,7 @@ Once connected, the LLM has access to:
 
 ### Read-only Mode
 
-`DUPLICATI_READONLY=true` disables `run_backup`, `abort_backup` and `import_backup_config`. All read tools remain active. Useful for safely exploring and analysing backup configurations without any risk of modification.
+`DUPLICATI_READONLY=true` disables `run_backup`, `abort_backup`, `update_backup_config` and `import_backup_config`. All read tools remain active. Useful for safely exploring and analysing backup configurations without any risk of modification.
 
 ## Docker Hub
 

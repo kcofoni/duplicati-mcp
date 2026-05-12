@@ -9,7 +9,7 @@ from mcp.server.fastmcp import FastMCP
 
 load_dotenv(override=True)
 
-from .client import DuplicatiClient, DuplicatiError
+from duplicati_mcp.client import DuplicatiClient, DuplicatiError
 
 mcp = FastMCP(
     "duplicati",
@@ -189,5 +189,7 @@ async def import_backup_config(config_json: str) -> str:
 
 def main() -> None:
     """Entry point — selects stdio or streamable-http transport based on MCP_TRANSPORT env var."""
-    transport = os.environ.get("MCP_TRANSPORT", "stdio")
-    mcp.run(transport=transport if transport == "streamable-http" else "stdio")
+    if os.environ.get("MCP_TRANSPORT") == "streamable-http":
+        mcp.run(transport="streamable-http")
+    else:
+        mcp.run(transport="stdio")
