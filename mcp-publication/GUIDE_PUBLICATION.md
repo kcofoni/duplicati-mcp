@@ -4,6 +4,105 @@ Ce guide couvre la publication du serveur MCP Duplicati sur les trois registres 
 
 ---
 
+## Publier une nouvelle version — Procédure pas à pas
+
+Utiliser cette section comme check-list à chaque nouvelle publication.
+
+### Étape 0 : Choisir le numéro de version
+
+Suivre le [Semantic Versioning](https://semver.org/) :
+- **Patch** (`1.0.0` → `1.0.1`) : corrections de bugs, doc, changements internes mineurs
+- **Minor** (`1.0.0` → `1.1.0`) : nouveaux outils, nouvelles fonctionnalités, changements rétrocompatibles
+- **Major** (`1.0.0` → `2.0.0`) : ruptures de compatibilité (auth, transport, signatures des outils)
+
+### Étape 1 : S'assurer que tout est commité
+
+```bash
+git status
+```
+
+S'il reste des fichiers non commités, les commiter avec un message descriptif avant de créer le commit de release.
+
+### Étape 2 : Bumper la version
+
+Mettre à jour le numéro de version dans trois fichiers :
+
+**`pyproject.toml`**
+```toml
+version = "X.Y.Z"
+```
+
+**`CHANGELOG.md`** — ajouter une nouvelle section en tête :
+```markdown
+## [vX.Y.Z] - AAAA-MM-JJ
+
+### Added / Changed / Fixed
+- ...
+```
+
+**`mcp-publication/duplicati/server.json`**
+```json
+"version": "X.Y.Z",
+"identifier": "docker.io/kcofoni/duplicati-mcp:vX.Y.Z"
+```
+
+### Étape 3 : Rebuilder le package
+
+```bash
+uv build
+```
+
+> Toujours rebuilder après un changement de source ou de README — le `.tar.gz` contient le README affiché sur PyPI.
+
+### Étape 4 : Commiter, tagger et pousser sur GitHub
+
+```bash
+git add .
+git commit -m "Release vX.Y.Z — <résumé en une ligne>"
+git tag vX.Y.Z
+git push origin main --tags
+```
+
+### Étape 5 : Publier sur Docker Hub
+
+```bash
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  -t kcofoni/duplicati-mcp:vX.Y.Z \
+  -t kcofoni/duplicati-mcp:latest \
+  --push \
+  .
+```
+
+Vérifier que l'image est publique sur https://hub.docker.com/r/kcofoni/duplicati-mcp
+
+### Étape 6 : Publier sur PyPI
+
+```bash
+UV_PUBLISH_TOKEN="votre-token-pypi" uv publish
+```
+
+Vérifier sur https://pypi.org/project/duplicati-mcp/
+
+### Étape 7 : Publier sur le registre MCP
+
+```bash
+cd mcp-publication/duplicati
+mcp-publisher publish
+```
+
+Vérifier sur https://registry.modelcontextprotocol.io
+
+### Étape 8 : Vérifications finales
+
+- [ ] Tag GitHub `vX.Y.Z` visible sur https://github.com/kcofoni/duplicati-mcp/releases
+- [ ] Docker Hub affiche `vX.Y.Z` et `latest` mis à jour
+- [ ] Page PyPI affiche la bonne version et le bon README
+- [ ] Le registre MCP retourne le serveur en cherchant "duplicati"
+- [ ] `uvx duplicati-mcp@latest` s'installe et démarre correctement
+
+---
+
 ## Partie 1 — PyPI
 
 ### Prérequis

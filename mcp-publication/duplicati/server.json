@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.kcofoni/duplicati-mcp",
   "version": "1.0.0",
-  "description": "MCP server for managing Duplicati backup jobs — list, run, monitor and configure backups from an LLM.",
+  "description": "MCP server for Duplicati backup management — list, run, monitor and configure jobs from an LLM.",
   "repository": {
     "url": "https://github.com/kcofoni/duplicati-mcp",
     "source": "github"
@@ -12,7 +12,7 @@
       "registryType": "oci",
       "identifier": "docker.io/kcofoni/duplicati-mcp:v1.0.0",
       "transport": {
-        "type": "http",
+        "type": "streamable-http",
         "url": "http://localhost:3000/mcp"
       },
       "environmentVariables": [
@@ -30,7 +30,7 @@
         },
         {
           "name": "DUPLICATI_READONLY",
-          "description": "Set to true to disable write operations (run, abort, import). Default: false",
+          "description": "Set to true to disable write operations (run, abort, update, import). Default: false",
           "isRequired": false,
           "isSecret": false
         }
@@ -44,7 +44,7 @@
         "List all configured Duplicati backup jobs",
         "Trigger and abort backup runs",
         "Monitor live backup progress and server status",
-        "Export and import backup job configurations",
+        "Export, update and import backup job configurations",
         "Read-only mode for safe exploration"
       ]
     }
