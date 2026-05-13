@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.1] - 2026-05-13
+
+### Fixed
+- server.json: transport type corrected (`http` → `streamable-http`) for MCP registry validation
+- server.json: description shortened to ≤100 characters
+- server.py: Literal type hint fixed in `main()`, switched to absolute imports for `mcp dev` compatibility
+
+### Added
+- `/release` skill: step-by-step guided release procedure (`.claude/commands/release.md`)
+- Publication guides: full PyPI section (TestPyPI + prod, token scoping notes)
+- Publication guides: complete release checklist orchestrating all three registries
+- pyproject.toml: TestPyPI index configuration for `uv publish --index testpypi`
+
+### Changed
+- README/README_fr: added stdio client config, fixed Claude Desktop config to use `mcp-proxy`
+- README/README_fr: `update_backup_config` tool documented (9 tools total)
+- DOCKER_HUB_DESCRIPTION: tools list and client configurations updated
+
 ## [v1.0.0] - 2026-05-12
 
 ### Added
