@@ -78,13 +78,31 @@ Verify the image is public at https://hub.docker.com/r/kcofoni/duplicati-mcp
 
 ### Step 6: Publish to PyPI
 
+#### 6a — TestPyPI first
+
 ```bash
-UV_PUBLISH_TOKEN="your-pypi-token" uv publish
+export PYPI_TEST_TOKEN=$(grep '^PYPI_TEST_TOKEN=' .env | cut -d= -f2-)
+UV_PUBLISH_TOKEN=$PYPI_TEST_TOKEN uv publish --index testpypi
+```
+
+Verify at https://test.pypi.org/project/duplicati-mcp/ before proceeding.
+
+#### 6b — PyPI production
+
+```bash
+export UV_PUBLISH_TOKEN=$(grep '^UV_PUBLISH_TOKEN=' .env | cut -d= -f2-)
+uv publish
 ```
 
 Verify at https://pypi.org/project/duplicati-mcp/
 
 ### Step 7: Publish to the MCP registry
+
+> **Reminder**: authenticate before publishing if you haven't done so in this session:
+> ```bash
+> cd mcp-publication/duplicati
+> mcp-publisher login github
+> ```
 
 ```bash
 cd mcp-publication/duplicati
@@ -275,6 +293,14 @@ Verify at https://registry.modelcontextprotocol.io (search "duplicati").
 **Error "no child with platform linux/amd64"**: use buildx (Step 2 of Part 2).
 
 **403 on mcp-publisher**: ensure the Docker image is public on Docker Hub before publishing.
+
+**422 validation error**: run the registry validator to get the exact error details:
+```bash
+curl -s -X POST https://registry.modelcontextprotocol.io/v0.1/validate \
+  -H "Content-Type: application/json" \
+  -d @server.json | python3 -m json.tool
+```
+Common causes: description over 100 characters, invalid transport type (use `streamable-http` not `http`).
 
 ---
 

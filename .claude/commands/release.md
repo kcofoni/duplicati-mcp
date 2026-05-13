@@ -65,22 +65,41 @@ Verify the push succeeded.
 
 ### Step 6 — Publish to PyPI
 
-Load the token from `.env` and publish. Ask before running:
+#### 6a — TestPyPI first
+
+Load the token from `.env` and publish to TestPyPI. Ask before running:
 
 ```bash
-source .env && uv publish
+export PYPI_TEST_TOKEN=$(grep '^PYPI_TEST_TOKEN=' .env | cut -d= -f2-)
+UV_PUBLISH_TOKEN=$PYPI_TEST_TOKEN uv publish --index testpypi
+```
+
+Verify at https://test.pypi.org/project/duplicati-mcp/ and ask the user to confirm before proceeding.
+
+#### 6b — PyPI production
+
+```bash
+export UV_PUBLISH_TOKEN=$(grep '^UV_PUBLISH_TOKEN=' .env | cut -d= -f2-)
+uv publish
 ```
 
 Verify at https://pypi.org/project/duplicati-mcp/
 
 ### Step 7 — Publish to the MCP registry
 
+> **Reminder**: you must authenticate before publishing. If you haven't done so yet in this session, run:
+> ```bash
+> cd mcp-publication/duplicati
+> mcp-publisher login github
+> ```
+> Then follow the GitHub OAuth flow.
+
+Once authenticated:
+
 ```bash
 cd mcp-publication/duplicati
 mcp-publisher publish
 ```
-
-If not authenticated, run `mcp-publisher login github` first.
 
 ### Step 8 — Final checklist
 
