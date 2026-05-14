@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.1] - 2026-05-14
+
+### Fixed
+- SQLite per-backup databases now open correctly on read-only Docker volume mounts
+  (`immutable=1` replaces `mode=ro` to bypass fcntl locking unavailable on `:ro` mounts)
+- Backup DB path resolution moved back into `DuplicatiServerDB.get_backup_db_path()`,
+  removing the redundant `_resolve_backup_db_path` helper from server.py
+
 ## [v1.1.0] - 2026-05-14
 
 ### Added

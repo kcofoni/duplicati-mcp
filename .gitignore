@@ -10,3 +10,4 @@ build/
 *.egg
 .env
 .mcpregistry_*
+.mcp.json

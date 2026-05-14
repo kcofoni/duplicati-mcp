@@ -11,11 +11,11 @@ _SENSITIVE_OPTION_NAMES = {"passphrase"}
 def _open_safe(db_path: str) -> sqlite3.Connection:
     """Return an in-memory snapshot of db_path via the SQLite Online Backup API.
 
-    Opens the source in read-only mode (?mode=ro), copies all pages to :memory:,
-    then closes the source immediately — no lock is held on the live file after this call.
+    Uses immutable=1 to bypass SQLite locking entirely — required on read-only
+    filesystem mounts (:ro Docker volumes) where fcntl locks are not available.
+    The source connection is closed immediately after the copy.
     """
-    source = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    source.execute("PRAGMA busy_timeout=2000")
+    source = sqlite3.connect(f"file:{db_path}?immutable=1", uri=True)
     dest = sqlite3.connect(":memory:")
     source.backup(dest)
     source.close()
@@ -52,8 +52,12 @@ class DuplicatiServerDB:
         return _open_safe(self._db_path)
 
     def get_backup_db_path(self, backup_id: int) -> str | None:
-        """Derive the per-backup DB path by combining the server DB directory
-        with the basename of Backup.DBPath (which may contain a Docker-internal path)."""
+        """Return the resolved per-backup DB path.
+
+        Duplicati stores Docker-internal paths (e.g. /config/XXXX.sqlite).
+        The directory is replaced with dirname(self._db_path) so the path
+        is valid wherever this server DB is mounted.
+        """
         conn = self._conn()
         try:
             row = conn.execute(
