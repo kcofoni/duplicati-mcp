@@ -115,6 +115,8 @@ async def abort_backup(backup_id: str) -> str:
         result = await _get_client().abort_backup(backup_id)
         return f"Abort signal sent for backup job {backup_id}.\n" + _fmt(result)
     except DuplicatiError as e:
+        if "not found" in str(e).lower():
+            return "Error: abort is not supported by this version of Duplicati — use the web interface to stop the backup."
         return f"Error: {e}"
 
 
@@ -196,6 +198,8 @@ async def import_backup_config(config_json: str) -> str:
         result = await _get_client().import_backup(config)
         return "Backup configuration imported successfully.\n" + _fmt(result)
     except DuplicatiError as e:
+        if "400" in str(e):
+            return "Error: import is not supported by this version of Duplicati — use the web interface to create a new job."
         return f"Error: {e}"
 
 

@@ -11,3 +11,4 @@ build/
 .env
 .mcpregistry_*
 .mcp.json
+.DS_Store

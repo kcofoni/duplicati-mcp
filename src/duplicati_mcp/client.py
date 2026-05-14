@@ -90,8 +90,14 @@ class DuplicatiClient:
         return await self._req("GET", "/api/v1/serverstate")
 
     async def export_backup(self, backup_id: str) -> dict:
-        """Export a backup job configuration as a dict."""
-        return await self._req("GET", f"/api/v1/backup/{backup_id}/export")
+        """Export a backup job configuration.
+
+        Falls back to GET /api/v1/backup/{id} because the dedicated /export endpoint
+        returns 400 on some Duplicati versions. The data is identical and compatible
+        with update_backup_config and import_backup_config.
+        """
+        data = await self._req("GET", f"/api/v1/backup/{backup_id}")
+        return {k: data[k] for k in ("Backup", "Schedule") if k in data}
 
     async def update_backup(self, backup_id: str, payload: dict) -> dict:
         """Update an existing backup job configuration via PUT."""
