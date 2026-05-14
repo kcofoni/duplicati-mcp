@@ -14,6 +14,16 @@ services:
       - DUPLICATI_PASSWORD=
       # Set to "true" to disable run_backup, abort_backup, import_backup_config
       - DUPLICATI_READONLY=false
+      # SQLite access (opt-in): uncomment and set the path to Duplicati-server.sqlite
+      # inside this container (must match the volume mount point below).
+      # - DUPLICATI_DB_PATH=/duplicati-config/Duplicati-server.sqlite
+    # Uncomment the volumes section to enable SQLite access.
+    # Option 1 — named volume (recommended, portable):
+    # volumes:
+    #   - duplicati_config:/duplicati-config:ro
+    # Option 2 — bind mount (host path access, easier to debug):
+    # volumes:
+    #   - /srv/duplicati/config:/duplicati-config:ro
     restart: unless-stopped
     networks:
       - duplicati-network
@@ -21,3 +31,7 @@ services:
 networks:
   duplicati-network:
     driver: bridge
+
+# Uncomment if using Option 1 (named volume) above.
+# volumes:
+#   duplicati_config:

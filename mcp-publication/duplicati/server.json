@@ -1,7 +1,7 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.kcofoni/duplicati-mcp",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "MCP server for Duplicati backup management — list, run, monitor and configure jobs from an LLM.",
   "repository": {
     "url": "https://github.com/kcofoni/duplicati-mcp",
@@ -10,7 +10,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "docker.io/kcofoni/duplicati-mcp:v1.0.1",
+      "identifier": "docker.io/kcofoni/duplicati-mcp:v1.1.0",
       "transport": {
         "type": "streamable-http",
         "url": "http://localhost:3000/mcp"
@@ -33,6 +33,12 @@
           "description": "Set to true to disable write operations (run, abort, update, import). Default: false",
           "isRequired": false,
           "isSecret": false
+        },
+        {
+          "name": "DUPLICATI_DB_PATH",
+          "description": "Path to Duplicati-server.sqlite — enables SQLite history tools (db_*). Leave empty to disable.",
+          "isRequired": false,
+          "isSecret": false
         }
       ]
     }
@@ -45,7 +51,8 @@
         "Trigger and abort backup runs",
         "Monitor live backup progress and server status",
         "Export, update and import backup job configurations",
-        "Read-only mode for safe exploration"
+        "Read-only mode for safe exploration",
+        "SQLite-backed history: operation logs, errors, restore points, metadata (opt-in)"
       ]
     }
   }

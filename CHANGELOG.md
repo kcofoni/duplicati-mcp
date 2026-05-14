@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.1.0] - 2026-05-14
+
+### Added
+- 8 new SQLite-backed tools (`db_*`): backup metadata, schedule, errors, notifications,
+  options, operation history, operation log, and filesets (restore points)
+- New `DUPLICATI_DB_PATH` environment variable to enable read-only SQLite access (opt-in)
+- New `db.py` module: `DuplicatiServerDB` and `DuplicatiBackupDB` classes with safe
+  in-memory snapshot via SQLite Online Backup API (no lock on live Duplicati databases)
+- Docker volume documentation for sharing Duplicati config directory (named volume and bind mount)
+- Example prompts section in README and README_fr
+
+### Changed
+- docker-compose.yml: added `DUPLICATI_DB_PATH` and volume mount (commented out, opt-in)
+- Dockerfile: `DUPLICATI_DB_PATH` intentionally unset (opt-in)
+- README/README_fr: updated tools list (17 tools total), new environment variables table,
+  SQLite access section with Docker configuration examples
+
 ## [v1.0.1] - 2026-05-13
 
 ### Fixed

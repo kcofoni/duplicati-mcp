@@ -11,6 +11,7 @@ This Docker image runs an MCP server that wraps the Duplicati REST API using the
 - **Backup Management**: List jobs, trigger runs, abort active backups
 - **Live Monitoring**: Real-time progress, phase, file counts and ETA
 - **Config Export/Import**: Export job configurations as JSON for migration or backup
+- **History & Diagnostics**: Query operation history, error logs and restore points via SQLite (opt-in)
 - **Read-only Mode**: Lock the server to read-only for safe exploration
 - **Streamable HTTP**: Modern MCP transport, compatible with all current MCP clients
 
@@ -40,7 +41,14 @@ services:
       - DUPLICATI_URL=http://duplicati:8200
       - DUPLICATI_PASSWORD=
       - DUPLICATI_READONLY=false
+      # Optional: enable SQLite history tools (share Duplicati config as read-only volume)
+      # - DUPLICATI_DB_PATH=/duplicati-config/Duplicati-server.sqlite
+    # volumes:
+    #   - duplicati_config:/duplicati-config:ro
     restart: unless-stopped
+
+# volumes:
+#   duplicati_config:   # same named volume used by the Duplicati container
 ```
 
 ## Client Configuration
@@ -82,6 +90,7 @@ Claude Desktop requires `mcp-proxy` to connect to HTTP servers. Add to your conf
 
 ## Available Tools
 
+### REST API tools
 1. **list_backups**: List all configured backup jobs with status and last run info
 2. **get_backup**: Get detailed information about a specific job
 3. **run_backup**: Trigger a backup job immediately
@@ -89,8 +98,18 @@ Claude Desktop requires `mcp-proxy` to connect to HTTP servers. Add to your conf
 5. **get_progress**: Get live progress of the active backup task
 6. **get_server_status**: Get Duplicati server state and version
 7. **export_backup_config**: Export a job configuration as JSON
-8. **update_backup_config**: Update an existing job configuration in place (use with `export_backup_config` to modify sources, settings, schedule, etc.)
+8. **update_backup_config**: Update an existing job configuration in place
 9. **import_backup_config**: Import a job configuration from JSON
+
+### SQLite tools (require `DUPLICATI_DB_PATH`)
+10. **db_get_backup_metadata**: Rich metadata — last run date, duration, file counts, quota, last error
+11. **db_get_backup_schedule**: Schedule configuration for a job
+12. **db_list_errors**: Recent error log entries, optionally filtered by job
+13. **db_list_notifications**: System notifications (update alerts, etc.)
+14. **db_get_backup_options**: Configuration options for a job (passphrases excluded)
+15. **db_list_operations**: Operation history (Backup, Restore, List, etc.) with timestamps
+16. **db_get_operation_log**: Full result and statistics for a specific operation
+17. **db_list_filesets**: Available restore points (backup versions)
 
 ## Environment Variables
 
@@ -99,10 +118,27 @@ Claude Desktop requires `mcp-proxy` to connect to HTTP servers. Add to your conf
 | `DUPLICATI_URL` | `http://duplicati:8200` | URL of the Duplicati instance |
 | `DUPLICATI_PASSWORD` | _(empty)_ | Duplicati web interface password |
 | `DUPLICATI_READONLY` | `false` | Set to `true` to disable write operations |
+| `DUPLICATI_DB_PATH` | _(empty)_ | Path to `Duplicati-server.sqlite` — enables SQLite history tools |
 
 ## Read-only Mode
 
 Set `DUPLICATI_READONLY=true` to disable all write operations (`run_backup`, `abort_backup`, `update_backup_config`, `import_backup_config`). Read tools remain fully available — useful for safely exploring and analyzing your backup configuration.
+
+## SQLite Access
+
+Setting `DUPLICATI_DB_PATH` enables the `db_*` tools, which provide backup history, error logs, and restore points from Duplicati's local SQLite databases. Access is strictly read-only: databases are opened in read-only mode and copied to memory via the SQLite Online Backup API — the live Duplicati databases are never locked or modified.
+
+To enable, share the Duplicati config directory as a read-only volume and set the path:
+
+```bash
+docker run -d \
+  --name duplicati-mcp-server \
+  -p 3000:3000 \
+  -e DUPLICATI_URL=http://your-duplicati-host:8200 \
+  -e DUPLICATI_DB_PATH=/duplicati-config/Duplicati-server.sqlite \
+  -v duplicati_config:/duplicati-config:ro \
+  kcofoni/duplicati-mcp:latest
+```
 
 ## Technical Stack
 

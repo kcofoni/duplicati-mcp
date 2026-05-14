@@ -156,6 +156,47 @@ Une fois connecté, le LLM a accès à :
 8. **update_backup_config** — Mettre à jour une configuration existante en place (utiliser avec `export_backup_config` pour modifier sources, settings, schedule, etc.)
 9. **import_backup_config** — Importer une configuration de job depuis un JSON (crée un nouveau job)
 
+### Historique et diagnostics (SQLite — nécessite `DUPLICATI_DB_PATH`)
+10. **db_get_backup_metadata** — Métadonnées riches depuis la base locale : date du dernier run, durée, compteurs de fichiers, quota, dernière erreur
+11. **db_get_backup_schedule** — Configuration de planification d'un job
+12. **db_list_errors** — Journal des erreurs récentes, filtrable par job
+13. **db_list_notifications** — Notifications système (alertes de mise à jour, etc.)
+14. **db_get_backup_options** — Options de configuration d'un job (compression, politique de rétention, etc.) — les passphrases sont exclues
+15. **db_list_operations** — Historique des opérations d'un job (Backup, Restore, List, etc.) avec horodatage
+16. **db_get_operation_log** — Résultat complet et statistiques d'une opération spécifique
+17. **db_list_filesets** — Points de restauration disponibles (versions) pour un job
+
+## Exemples de prompts
+
+Une fois le serveur connecté à votre LLM, voici des prompts à utiliser :
+
+**État général**
+- "Quels jobs de sauvegarde sont configurés sur mon Duplicati ?"
+- "Quelle est la dernière sauvegarde qui a été exécutée et quel était son résultat ?"
+- "Est-ce qu'une sauvegarde est en cours en ce moment ?"
+
+**Historique et statistiques** _(nécessite `DUPLICATI_DB_PATH`)_
+- "Donne-moi l'historique des 10 dernières opérations du job 2"
+- "Quelle est la durée moyenne des sauvegardes récentes ?"
+- "Y a-t-il eu des erreurs sur mes sauvegardes ces dernières semaines ?"
+- "Combien de fichiers sont sauvegardés et quelle est la taille totale occupée sur la destination ?"
+
+**Points de restauration** _(nécessite `DUPLICATI_DB_PATH`)_
+- "Quels points de restauration sont disponibles pour mon job de sauvegarde ?"
+- "Quelle est la sauvegarde la plus ancienne disponible pour une restauration ?"
+
+**Configuration** _(nécessite `DUPLICATI_DB_PATH`)_
+- "Quelle est la politique de rétention configurée sur mon job de sauvegarde ?"
+- "Quelles sont les options de compression et de chiffrement utilisées ?"
+
+**Diagnostic** _(nécessite `DUPLICATI_DB_PATH`)_
+- "Y a-t-il des notifications système en attente sur Duplicati ?"
+- "Mon Duplicati a-t-il rencontré des erreurs récemment ? Lesquelles ?"
+- "Analyse la dernière sauvegarde et dis-moi si tout s'est bien passé"
+
+**Question ouverte** _(combine plusieurs outils)_
+- "Fais-moi un bilan de santé complet de mes sauvegardes Duplicati"
+
 ## Variables d'environnement
 
 | Variable | Défaut | Description |
@@ -163,12 +204,38 @@ Une fois connecté, le LLM a accès à :
 | `DUPLICATI_URL` | `http://localhost:8200` | URL de l'instance Duplicati |
 | `DUPLICATI_PASSWORD` | _(vide)_ | Mot de passe de l'interface web Duplicati (laisser vide si aucun) |
 | `DUPLICATI_READONLY` | _(vide)_ | Mettre à `true`, `1` ou `yes` pour désactiver les opérations d'écriture |
+| `DUPLICATI_DB_PATH` | _(vide)_ | Chemin vers `Duplicati-server.sqlite` — active les outils d'historique SQLite |
 | `MCP_TRANSPORT` | `stdio` | Transport : `stdio` ou `streamable-http` |
 | `MCP_PORT` | `3000` | Port pour le transport Streamable HTTP |
 
 ### Mode lecture seule
 
 `DUPLICATI_READONLY=true` désactive `run_backup`, `abort_backup`, `update_backup_config` et `import_backup_config`. Tous les outils de lecture restent actifs. Utile pour explorer et analyser les configurations de sauvegarde sans risque de modification.
+
+### Accès SQLite
+
+La définition de `DUPLICATI_DB_PATH` active les outils `db_*`, qui lisent directement les bases de données SQLite de Duplicati. L'accès est strictement en lecture seule : les bases sont ouvertes en mode lecture seule et copiées en mémoire via l'API SQLite Online Backup avant toute requête — les bases Duplicati ne sont jamais verrouillées ni modifiées.
+
+**Utilisation locale** — pointer vers la base serveur sur la machine :
+```
+DUPLICATI_DB_PATH=/chemin/vers/duplicati/config/Duplicati-server.sqlite
+```
+
+**Docker** — partager le répertoire de config Duplicati en volume lecture seule. Dans `docker-compose.yml` :
+
+```yaml
+services:
+  duplicati-mcp:
+    # ...
+    volumes:
+      - duplicati_config:/duplicati-config:ro   # volume nommé (recommandé)
+      # ou : - /srv/duplicati/config:/duplicati-config:ro  # bind mount
+    environment:
+      - DUPLICATI_DB_PATH=/duplicati-config/Duplicati-server.sqlite
+
+volumes:
+  duplicati_config:   # doit être le même volume que celui utilisé par le conteneur Duplicati
+```
 
 ## Docker Hub
 
@@ -190,6 +257,7 @@ duplicati-mcp/
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── client.py        # Client REST API Duplicati
+│       ├── db.py            # Accès SQLite lecture seule (DB serveur + DB par-backup)
 │       └── server.py        # Serveur FastMCP et outils
 ├── mcp-publication/         # Fichiers de publication au registre MCP
 ├── requirements.txt         # Dépendances Python

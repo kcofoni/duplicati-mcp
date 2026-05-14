@@ -156,6 +156,47 @@ Once connected, the LLM has access to:
 8. **update_backup_config** — Update an existing job configuration in place (use with `export_backup_config` to modify sources, settings, schedule, etc.)
 9. **import_backup_config** — Import a job configuration from JSON (creates a new job)
 
+### History & Diagnostics (SQLite — requires `DUPLICATI_DB_PATH`)
+10. **db_get_backup_metadata** — Rich metadata from the local database: last run date, duration, file counts, quota usage, last error
+11. **db_get_backup_schedule** — Schedule configuration for a backup job
+12. **db_list_errors** — Recent error log entries, optionally filtered by job
+13. **db_list_notifications** — System notifications (update alerts, etc.)
+14. **db_get_backup_options** — Configuration options for a job (compression, retention policy, etc.) — passphrases excluded
+15. **db_list_operations** — Operation history for a job (Backup, Restore, List, etc.) with timestamps
+16. **db_get_operation_log** — Full result and statistics for a specific operation
+17. **db_list_filesets** — Available restore points (backup versions) for a job
+
+## Example Prompts
+
+Once the server is connected to your LLM, here are prompts you can use:
+
+**General status**
+- "What backup jobs are configured on my Duplicati?"
+- "What was the last backup that ran and what was the result?"
+- "Is a backup currently running?"
+
+**History & statistics** _(requires `DUPLICATI_DB_PATH`)_
+- "Show me the last 10 operations for backup job 2"
+- "What is the average duration of recent backups?"
+- "Have there been any errors on my backups in the past few weeks?"
+- "How many files are backed up and what is the total size on the destination?"
+
+**Restore points** _(requires `DUPLICATI_DB_PATH`)_
+- "What restore points are available for my backup job?"
+- "What is the oldest backup available for a restore?"
+
+**Configuration** _(requires `DUPLICATI_DB_PATH`)_
+- "What retention policy is configured on my backup job?"
+- "What compression and encryption options are in use?"
+
+**Diagnostics** _(requires `DUPLICATI_DB_PATH`)_
+- "Are there any pending system notifications on Duplicati?"
+- "Has my Duplicati encountered any errors recently? Which ones?"
+- "Analyse the last backup and tell me if everything went well"
+
+**Open-ended** _(combines multiple tools)_
+- "Give me a full health report on my Duplicati backups"
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -163,12 +204,38 @@ Once connected, the LLM has access to:
 | `DUPLICATI_URL` | `http://localhost:8200` | URL of the Duplicati instance |
 | `DUPLICATI_PASSWORD` | _(empty)_ | Duplicati web interface password (leave empty if none set) |
 | `DUPLICATI_READONLY` | _(empty)_ | Set to `true`, `1` or `yes` to disable write operations |
+| `DUPLICATI_DB_PATH` | _(empty)_ | Path to `Duplicati-server.sqlite` — enables SQLite-backed history tools |
 | `MCP_TRANSPORT` | `stdio` | Transport: `stdio` or `streamable-http` |
 | `MCP_PORT` | `3000` | Port for Streamable HTTP transport |
 
 ### Read-only Mode
 
 `DUPLICATI_READONLY=true` disables `run_backup`, `abort_backup`, `update_backup_config` and `import_backup_config`. All read tools remain active. Useful for safely exploring and analysing backup configurations without any risk of modification.
+
+### SQLite Access
+
+Setting `DUPLICATI_DB_PATH` enables the `db_*` tools, which read directly from the Duplicati SQLite databases. Access is strictly read-only: databases are opened in read-only mode and copied to memory via the SQLite Online Backup API before any query — the live Duplicati databases are never locked or modified.
+
+**Local use** — point to the server database on your machine:
+```
+DUPLICATI_DB_PATH=/path/to/duplicati/config/Duplicati-server.sqlite
+```
+
+**Docker** — share the Duplicati config directory as a read-only volume. In `docker-compose.yml`:
+
+```yaml
+services:
+  duplicati-mcp:
+    # ...
+    volumes:
+      - duplicati_config:/duplicati-config:ro   # named volume (recommended)
+      # or: - /srv/duplicati/config:/duplicati-config:ro  # bind mount
+    environment:
+      - DUPLICATI_DB_PATH=/duplicati-config/Duplicati-server.sqlite
+
+volumes:
+  duplicati_config:   # must be the same volume used by the Duplicati container
+```
 
 ## Docker Hub
 
@@ -190,6 +257,7 @@ duplicati-mcp/
 │       ├── __init__.py
 │       ├── __main__.py
 │       ├── client.py        # Duplicati REST API client
+│       ├── db.py            # Read-only SQLite access (server DB + per-backup DBs)
 │       └── server.py        # FastMCP server and tools
 ├── mcp-publication/         # MCP registry publication files
 ├── requirements.txt         # Python dependencies
